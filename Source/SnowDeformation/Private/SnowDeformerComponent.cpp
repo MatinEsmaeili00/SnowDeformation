@@ -2,7 +2,9 @@
 
 #include "SnowDeformerComponent.h"
 
+#include "CollisionQueryParams.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Engine/HitResult.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "SnowDeformationSubsystem.h"

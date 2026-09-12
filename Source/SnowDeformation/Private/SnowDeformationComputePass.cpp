@@ -4,8 +4,8 @@
 
 #include "RenderGraphBuilder.h"
 #include "RenderGraphUtils.h"
+#include "RenderTargetPool.h"
 #include "RHIStaticStates.h"
-#include "ScreenPass.h"
 
 IMPLEMENT_GLOBAL_SHADER(FSnowAccumulateCS, "/SnowDeformationShaders/Private/SnowDeformation.usf", "SnowAccumulateCS", SF_Compute);
 IMPLEMENT_GLOBAL_SHADER(FSnowNormalsCS, "/SnowDeformationShaders/Private/SnowDeformation.usf", "SnowNormalsCS", SF_Compute);
