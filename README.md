@@ -16,6 +16,22 @@ Blueprint at all.
 
 Developed against **UE 5.8**.
 
+## Documentation
+
+This README covers using the plugin. If you want to understand how it works —
+or rebuild it yourself — [**`Docs/`**](Docs/README.md) explains every part and
+the reasoning behind it.
+
+| # | Document | |
+|---|---|---|
+| 1 | [Architecture](Docs/01-architecture.md) | The shape of the system, and the one idea everything follows from |
+| 2 | [The GPU compute pipeline](Docs/02-gpu-compute-pipeline.md) | Global shaders, RDG, UAVs, structured buffers, thread groups |
+| 3 | [Shader walkthrough](Docs/03-shader-walkthrough.md) | `SnowDeformation.usf` line by line, maths derived from scratch |
+| 4 | [C++ reference](Docs/04-cpp-reference.md) | Every class and file, and why it's that kind of object |
+| 5 | [Material wiring](Docs/05-material-wiring.md) | Why getting GPU output into a material is the hard part |
+| 6 | [Build it yourself](Docs/06-build-it-yourself.md) | Empty plugin → working footprints, verifiable at every stage |
+| 7 | [Tuning & troubleshooting](Docs/07-tuning-and-troubleshooting.md) | Every knob, and symptom → cause |
+
 ## How it works
 
 ```
