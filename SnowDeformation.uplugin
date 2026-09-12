@@ -1,9 +1,9 @@
 {
 	"FileVersion": 3,
-	"Version": 1,
-	"VersionName": "1.0",
+	"Version": 2,
+	"VersionName": "1.1",
 	"FriendlyName": "Snow Deformation",
-	"Description": "GPU compute-shader snow deformation: a persistent, world-anchored height field that characters press footprints into as they walk, plus the normals needed to shade them.",
+	"Description": "GPU compute-shader snow deformation: a persistent, world-anchored height field that characters press footprints into as they walk, plus the normals needed to shade them and the material wiring to use both.",
 	"Category": "Rendering",
 	"CreatedBy": "Matin",
 	"CreatedByURL": "",
