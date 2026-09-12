@@ -1,0 +1,142 @@
+// Snow deformation compute shaders.
+//
+// Two passes run every frame:
+//
+//   SnowAccumulateCS - maintains a persistent, world-anchored height field.
+//                      It reprojects last frame's buffer into this frame's
+//                      region (so tracks stay put in the world while the
+//                      region scrolls with the player), relaxes the snow back
+//                      towards flat, then stamps every active deformer.
+//
+//   SnowNormalsCS    - turns the height field into the RGBA texture the snow
+//                      material samples: R = height, GB = normal XY.
+//
+// Height convention: +1 means "pressed all the way down by MaxDepth",
+// negative values are the rim of displaced snow pushed up around a print.
+
+#include "/Engine/Private/Common.ush"
+
+// Must match FSnowDeformerGPU in SnowDeformationComputePass.h exactly.
+struct FSnowDeformerGPU
+{
+	float2 LocalCenter;	// XY relative to the current region centre, in world units
+	float  Radius;		// world units
+	float  Depth;		// 0..1, how far down this deformer presses
+	float  Falloff;		// edge sharpness exponent
+	float  RimWidth;	// world units of displaced snow ring outside Radius
+	float  RimHeight;	// 0..1, how high the rim piles up
+	float  Strength;	// 0..1 master multiplier (fades a foot out as it lifts)
+};
+
+// ---------------------------------------------------------------------------
+// Accumulate pass
+// ---------------------------------------------------------------------------
+
+Texture2D<float>				PrevHeightTexture;
+SamplerState					PrevHeightSampler;
+RWTexture2D<float>				OutHeightTexture;
+StructuredBuffer<FSnowDeformerGPU>	Deformers;
+
+int2	TextureSize;
+float	RegionSize;				// world units covered by the whole texture
+float2	RegionOffsetFromPrev;	// CurrentRegionCentre - PreviousRegionCentre
+int		NumDeformers;
+float	RefillRate;				// normalised height recovered per second
+float	DeltaTime;
+float	ClearMask;				// 0 wipes the buffer this frame, 1 keeps it
+
+[numthreads(THREADS_X, THREADS_Y, 1)]
+void SnowAccumulateCS(uint3 DTid : SV_DispatchThreadID)
+{
+	const int2 Pixel = int2(DTid.xy);
+	if (any(Pixel >= TextureSize))
+	{
+		return;
+	}
+
+	const float2 UV = (float2(Pixel) + 0.5f) / float2(TextureSize);
+
+	// Position of this texel relative to the region centre, in world units.
+	// Working in local space keeps everything in comfortable float range no
+	// matter how far from the origin the level is built.
+	const float2 LocalXY = (UV - 0.5f) * RegionSize;
+
+	// Where this same world position sat in last frame's buffer.
+	const float2 PrevUV = (LocalXY + RegionOffsetFromPrev) / RegionSize + 0.5f;
+
+	float Height = 0.0f;
+	if (all(PrevUV > 0.0f) && all(PrevUV < 1.0f))
+	{
+		Height = PrevHeightTexture.SampleLevel(PrevHeightSampler, PrevUV, 0).r * ClearMask;
+	}
+
+	// Snow slowly settles back to flat (fresh snowfall filling the tracks in).
+	const float Refill = RefillRate * DeltaTime;
+	Height = (Height > 0.0f) ? max(Height - Refill, 0.0f) : min(Height + Refill, 0.0f);
+
+	// Stamp the deformers. max() keeps the deepest press ever made at this
+	// texel, which is what makes the trail persist behind the player.
+	for (int i = 0; i < NumDeformers; ++i)
+	{
+		const FSnowDeformerGPU D = Deformers[i];
+
+		const float Dist = length(LocalXY - D.LocalCenter);
+		if (Dist > D.Radius + D.RimWidth)
+		{
+			continue;
+		}
+
+		if (Dist <= D.Radius)
+		{
+			float Core = 1.0f - saturate(Dist / max(D.Radius, 0.001f));
+			Core = pow(Core, max(D.Falloff, 0.001f));
+			Height = max(Height, Core * D.Depth * D.Strength);
+		}
+		else if (D.RimHeight > 0.0f && Height <= 0.0f)
+		{
+			// Ring of snow shoved outwards by the footfall. Only written where
+			// the snow is still undisturbed so it never erases an older print.
+			const float R = saturate((Dist - D.Radius) / max(D.RimWidth, 0.001f));
+			const float Ring = sin(R * PI);
+			Height = min(Height, -Ring * D.RimHeight * D.Strength);
+		}
+	}
+
+	OutHeightTexture[Pixel] = Height;
+}
+
+// ---------------------------------------------------------------------------
+// Normals pass
+// ---------------------------------------------------------------------------
+
+Texture2D<float>	HeightTexture;
+RWTexture2D<float4>	OutSnowDataTexture;
+
+float	MaxDepth;		// world units a height of 1.0 corresponds to
+float	NormalStrength;
+
+[numthreads(THREADS_X, THREADS_Y, 1)]
+void SnowNormalsCS(uint3 DTid : SV_DispatchThreadID)
+{
+	const int2 Pixel = int2(DTid.xy);
+	if (any(Pixel >= TextureSize))
+	{
+		return;
+	}
+
+	const int2 MaxPixel = TextureSize - 1;
+	const float HL = HeightTexture.Load(int3(clamp(Pixel.x - 1, 0, MaxPixel.x), Pixel.y, 0));
+	const float HR = HeightTexture.Load(int3(clamp(Pixel.x + 1, 0, MaxPixel.x), Pixel.y, 0));
+	const float HU = HeightTexture.Load(int3(Pixel.x, clamp(Pixel.y - 1, 0, MaxPixel.y), 0));
+	const float HD = HeightTexture.Load(int3(Pixel.x, clamp(Pixel.y + 1, 0, MaxPixel.y), 0));
+	const float H  = HeightTexture.Load(int3(Pixel, 0));
+
+	// Surface Z is -Height * MaxDepth, so the slope is the negated gradient.
+	const float TexelWorldSize = RegionSize / float(TextureSize.x);
+	const float DzDx = -(HR - HL) * MaxDepth / (2.0f * TexelWorldSize);
+	const float DzDy = -(HD - HU) * MaxDepth / (2.0f * TexelWorldSize);
+
+	const float3 Normal = normalize(float3(-DzDx * NormalStrength, -DzDy * NormalStrength, 1.0f));
+
+	OutSnowDataTexture[Pixel] = float4(H, Normal.x, Normal.y, 1.0f);
+}
