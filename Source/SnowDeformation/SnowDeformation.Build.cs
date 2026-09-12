@@ -1,6 +1,5 @@
 // Copyright Matin. All Rights Reserved.
 
-using System.IO;
 using UnrealBuildTool;
 
 public class SnowDeformation : ModuleRules
@@ -9,32 +8,24 @@ public class SnowDeformation : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicIncludePaths.AddRange(
-			new string[]
-			{
-				// CreateRenderTarget() / render-target-pool helpers used by SnowDeformationComputePass.cpp
-				// live in the Renderer module's private headers.
-				Path.Combine(GetModuleDirectory("Renderer"), "Private"),
-			}
-		);
-
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
 				"Core",
+				"CoreUObject",
 				"Engine",
+				// USnowDeformationSettings derives from UDeveloperSettings, so
+				// anything including our public headers needs this too.
+				"DeveloperSettings",
 			}
 		);
 
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"CoreUObject",
-				"Engine",
 				"Projects",
 				"RHI",
 				"RenderCore",
-				"Renderer",
 			}
 		);
 	}

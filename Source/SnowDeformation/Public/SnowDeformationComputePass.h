@@ -11,6 +11,12 @@
 class FRHICommandListImmediate;
 class FRHITexture;
 
+namespace SnowDeformation
+{
+	/** Compute thread group size. Shared so the HLSL defines and the dispatch group count can never drift apart. */
+	static constexpr int32 ThreadGroupSize = 8;
+}
+
 /**
  * One thing pressing into the snow this frame. Layout must match
  * FSnowDeformerGPU in SnowDeformation.usf - all floats, tightly packed.
@@ -79,8 +85,8 @@ class FSnowAccumulateCS : public FGlobalShader
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-		SET_SHADER_DEFINE(OutEnvironment, THREADS_X, 8);
-		SET_SHADER_DEFINE(OutEnvironment, THREADS_Y, 8);
+		SET_SHADER_DEFINE(OutEnvironment, THREADS_X, SnowDeformation::ThreadGroupSize);
+		SET_SHADER_DEFINE(OutEnvironment, THREADS_Y, SnowDeformation::ThreadGroupSize);
 	}
 };
 
@@ -112,8 +118,8 @@ class FSnowNormalsCS : public FGlobalShader
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-		SET_SHADER_DEFINE(OutEnvironment, THREADS_X, 8);
-		SET_SHADER_DEFINE(OutEnvironment, THREADS_Y, 8);
+		SET_SHADER_DEFINE(OutEnvironment, THREADS_X, SnowDeformation::ThreadGroupSize);
+		SET_SHADER_DEFINE(OutEnvironment, THREADS_Y, SnowDeformation::ThreadGroupSize);
 	}
 };
 

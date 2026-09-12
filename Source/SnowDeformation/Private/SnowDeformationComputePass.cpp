@@ -4,7 +4,7 @@
 
 #include "RenderGraphBuilder.h"
 #include "RenderGraphUtils.h"
-#include "RenderTargetPool.h"
+#include "PooledRenderTarget.h"
 #include "RHIStaticStates.h"
 
 IMPLEMENT_GLOBAL_SHADER(FSnowAccumulateCS, "/SnowDeformationShaders/Private/SnowDeformation.usf", "SnowAccumulateCS", SF_Compute);
@@ -21,9 +21,9 @@ void SnowDeformation::Dispatch_RenderThread(FRHICommandListImmediate& RHICmdList
 
 	FRDGBuilder GraphBuilder(RHICmdList);
 
-	const FRDGTextureRef PrevHeightRDG = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(Params.PrevHeightTexture, TEXT("SnowPrevHeight")));
-	const FRDGTextureRef NextHeightRDG = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(Params.NextHeightTexture, TEXT("SnowNextHeight")));
-	const FRDGTextureRef SnowDataRDG   = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(Params.SnowDataTexture, TEXT("SnowData")));
+	const FRDGTextureRef PrevHeightRDG = RegisterExternalTexture(GraphBuilder, Params.PrevHeightTexture, TEXT("SnowPrevHeight"));
+	const FRDGTextureRef NextHeightRDG = RegisterExternalTexture(GraphBuilder, Params.NextHeightTexture, TEXT("SnowNextHeight"));
+	const FRDGTextureRef SnowDataRDG   = RegisterExternalTexture(GraphBuilder, Params.SnowDataTexture, TEXT("SnowData"));
 
 	const FRDGTextureUAVRef NextHeightUAV = GraphBuilder.CreateUAV(NextHeightRDG);
 	const FRDGTextureUAVRef SnowDataUAV   = GraphBuilder.CreateUAV(SnowDataRDG);
@@ -76,7 +76,7 @@ void SnowDeformation::Dispatch_RenderThread(FRHICommandListImmediate& RHICmdList
 			RDG_EVENT_NAME("SnowAccumulate(%dx%d, %d deformers)", Params.TextureSize.X, Params.TextureSize.Y, NumDeformers),
 			ComputeShader,
 			PassParameters,
-			FComputeShaderUtils::GetGroupCount(Params.TextureSize, FIntPoint(8, 8)));
+			FComputeShaderUtils::GetGroupCount(Params.TextureSize, FIntPoint(SnowDeformation::ThreadGroupSize, SnowDeformation::ThreadGroupSize)));
 	}
 
 	// --- Pass 2: height field -> height+normal texture --------------------
@@ -95,7 +95,7 @@ void SnowDeformation::Dispatch_RenderThread(FRHICommandListImmediate& RHICmdList
 			RDG_EVENT_NAME("SnowNormals(%dx%d)", Params.TextureSize.X, Params.TextureSize.Y),
 			ComputeShader,
 			PassParameters,
-			FComputeShaderUtils::GetGroupCount(Params.TextureSize, FIntPoint(8, 8)));
+			FComputeShaderUtils::GetGroupCount(Params.TextureSize, FIntPoint(SnowDeformation::ThreadGroupSize, SnowDeformation::ThreadGroupSize)));
 	}
 
 	GraphBuilder.Execute();

@@ -132,9 +132,9 @@ void SnowNormalsCS(uint3 DTid : SV_DispatchThreadID)
 	const float H  = HeightTexture.Load(int3(Pixel, 0));
 
 	// Surface Z is -Height * MaxDepth, so the slope is the negated gradient.
-	const float TexelWorldSize = RegionSize / float(TextureSize.x);
-	const float DzDx = -(HR - HL) * MaxDepth / (2.0f * TexelWorldSize);
-	const float DzDy = -(HD - HU) * MaxDepth / (2.0f * TexelWorldSize);
+	const float2 TexelWorldSize = RegionSize / float2(TextureSize);
+	const float DzDx = -(HR - HL) * MaxDepth / (2.0f * TexelWorldSize.x);
+	const float DzDy = -(HD - HU) * MaxDepth / (2.0f * TexelWorldSize.y);
 
 	const float3 Normal = normalize(float3(-DzDx * NormalStrength, -DzDy * NormalStrength, 1.0f));
 

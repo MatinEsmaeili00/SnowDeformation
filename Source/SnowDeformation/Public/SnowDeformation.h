@@ -2,7 +2,10 @@
 
 #pragma once
 
+#include "Logging/LogMacros.h"
 #include "Modules/ModuleManager.h"
+
+SNOWDEFORMATION_API DECLARE_LOG_CATEGORY_EXTERN(LogSnowDeformation, Log, All);
 
 /**
  * Module entry point. All it does is map the plugin's Shaders/ folder onto

@@ -8,6 +8,8 @@
 
 #define LOCTEXT_NAMESPACE "FSnowDeformationModule"
 
+DEFINE_LOG_CATEGORY(LogSnowDeformation);
+
 void FSnowDeformationModule::StartupModule()
 {
 	const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("SnowDeformation"));
